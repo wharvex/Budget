@@ -9,3 +9,8 @@ FROM GENERATE_SERIES(
     DATE '2001-12-31',
     INTERVAL '1 day'
 ) AS calendar(calendar_date);
+
+SELECT SETVAL(
+    PG_GET_SERIAL_SEQUENCE('day', 'day_id'),
+    (SELECT MAX(day_id) FROM day)
+);
