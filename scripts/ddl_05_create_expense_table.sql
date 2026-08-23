@@ -1,0 +1,8 @@
+CREATE TABLE expense (
+    expense_id INTEGER PRIMARY KEY,
+    day_id INTEGER NOT NULL REFERENCES day(day_id),
+    subtract_from_account_id INTEGER NOT NULL REFERENCES account(account_id),
+    add_to_account_id INTEGER NOT NULL REFERENCES account(account_id),
+    expense_type_id INTEGER NOT NULL REFERENCES expense_type(expense_type_id),
+    amount DECIMAL(19,2) NOT NULL
+);
