@@ -4,5 +4,6 @@ CREATE TABLE expense (
     subtract_from_account_id INTEGER NOT NULL REFERENCES account(account_id),
     add_to_account_id INTEGER NOT NULL REFERENCES account(account_id),
     expense_type_id INTEGER NOT NULL REFERENCES expense_type(expense_type_id),
-    amount DECIMAL(19,2) NOT NULL
+    amount DECIMAL(19,2) NOT NULL,
+    end_date DATE
 );
