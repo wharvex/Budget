@@ -1,3 +1,4 @@
+-- budget-02-dml-insert-days.sql
 INSERT INTO day (day_id, month, day, is_last_of_month)
 SELECT
     EXTRACT(DOY FROM calendar_date)::INTEGER,

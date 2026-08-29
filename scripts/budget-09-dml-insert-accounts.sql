@@ -1,3 +1,4 @@
+-- budget-09-dml-insert-accounts.sql
 INSERT INTO account (account_name, balance)
 VALUES
     ('Checking', 2500.00),

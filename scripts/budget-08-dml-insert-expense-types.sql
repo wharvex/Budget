@@ -1,3 +1,4 @@
+-- budget-08-dml-insert-expense-types.sql
 INSERT INTO expense_type (expense_type_name)
 VALUES
     ('Housing'),
