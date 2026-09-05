@@ -1,1 +1,3 @@
 personal_scripts/*.sql
+personal_scripts/*.pgsql
+personal_scripts/*.csv
