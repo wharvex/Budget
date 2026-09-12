@@ -58,7 +58,11 @@ final class JdbcFinanceRepository {
         try (PreparedStatement statement = connection.prepareStatement(SCHEDULES_SQL);
              ResultSet resultSet = statement.executeQuery()) {
             while (resultSet.next()) {
-                Long destinationAccountId = resultSet.getObject("add_to_account_id", Long.class);
+                Object o = resultSet.getObject("add_to_account_id");
+                Long destinationAccountId = null;
+                if (o != null) {
+                    destinationAccountId = ((Number) o).longValue();
+                }
                 schedules.add(new ExpenseSchedule(
                         resultSet.getLong("expense_id"),
                         resultSet.getString("expense_type_name"),
