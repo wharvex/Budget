@@ -24,10 +24,10 @@ final class PendingTransactionsCsv {
         }
 
         Map<String, Integer> columns = columns(rows.getFirst());
-        int statusColumn = requiredColumn(columns, "status");
-        int dateColumn = requiredColumn(columns, "date");
-        int amountColumn = requiredColumn(columns, "amount");
-        int descriptionColumn = requiredColumn(columns, "simple_description");
+        int statusColumn = requiredColumn(columns, "Status");
+        int dateColumn = requiredColumn(columns, "Date");
+        int amountColumn = requiredColumn(columns, "Amount");
+        int descriptionColumn = requiredColumn(columns, "Simple Description");
         List<PendingTransaction> transactions = new ArrayList<>();
         for (int rowNumber = 1; rowNumber < rows.size(); rowNumber++) {
             List<String> row = rows.get(rowNumber);
