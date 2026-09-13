@@ -12,5 +12,6 @@ VALUES
 ('Personal Care'),
 ('Education'),
 ('Savings'),
-('Miscellaneous');
-
+('Miscellaneous'),
+('Food'),
+('Gas');
