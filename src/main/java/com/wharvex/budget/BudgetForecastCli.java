@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
         mixinStandardHelpOptions = true,
         description = "Projects scheduled income, expenses, and account balances from a PostgreSQL budget database.")
 public final class BudgetForecastCli implements Callable<Integer> {
+    private static final String SAVINGS_ACCOUNT_NAME = "Savings";
+
     @Option(names = "--db-url", defaultValue = "${env:BUDGET_DB_URL}", required = true,
             description = "PostgreSQL JDBC URL (or BUDGET_DB_URL).")
     private String jdbcUrl;
@@ -60,11 +62,15 @@ public final class BudgetForecastCli implements Callable<Integer> {
         Map<String, Account> accountsByName = data.accounts().stream()
                 .collect(Collectors.toMap(Account::name, account -> account, (first, ignored) -> first));
         List<Account> selectedAccounts = selectedAccounts(data.accounts(), accountsByName);
+        Account savingsAccount = accountsByName.get(SAVINGS_ACCOUNT_NAME);
+        if (savingsAccount == null) {
+            throw new IllegalStateException("Account was not loaded: " + SAVINGS_ACCOUNT_NAME);
+        }
 
         List<ProjectedEvent> events = new ProjectionService().project(data, from, through);
         printHeader();
         for (ProjectedEvent event : events) {
-            printEvent(event, accountsById, selectedAccounts);
+            printEvent(event, accountsById, selectedAccounts, savingsAccount.id());
         }
         if (events.isEmpty()) {
             System.out.printf("No scheduled income or expenses from %s through %s.%n", from, through);
@@ -85,15 +91,17 @@ public final class BudgetForecastCli implements Callable<Integer> {
         }).toList();
     }
 
-    private void printHeader() {
-        System.out.printf("%-10s  %-24s  %-20s  %14s  %14s  %14s  %20s%n",
-                "DATE", "TRANSACTION", "ACCOUNT", "CHANGE", "CHECKING", "CC PENDING", "CC PENDING -5 DAYS");
+    void printHeader() {
+        System.out.printf("%-10s  %-24s  %-20s  %14s  %14s  %14s  %14s  %20s%n",
+                "DATE", "TRANSACTION", "ACCOUNT", "CHANGE", "CHECKING", "SAVINGS", "CC PENDING",
+                "CC PENDING -5 DAYS");
     }
 
-    private void printEvent(
+    void printEvent(
             ProjectedEvent event,
             Map<Long, Account> accountsById,
-            List<Account> selectedAccounts) {
+            List<Account> selectedAccounts,
+            long savingsAccountId) {
         Map<Long, BigDecimal> changes = new HashMap<>();
         changes.put(event.subtractFromAccountId(), event.amount().negate());
         if (event.addToAccountId() != null) {
@@ -102,12 +110,13 @@ public final class BudgetForecastCli implements Callable<Integer> {
         for (Account account : selectedAccounts) {
             BigDecimal change = changes.get(account.id());
             if (change != null) {
-                System.out.printf("%-10s  %-24s  %-20s  %14s  %14s  %14s  %20s%n",
+                System.out.printf("%-10s  %-24s  %-20s  %14s  %14s  %14s  %14s  %20s%n",
                         event.date(),
                         event.expenseType(),
                         accountsById.get(account.id()).name(),
                         formatCurrency(change),
                         formatCurrency(event.checkingBalanceAfter()),
+                        formatCurrency(event.balancesAfter().get(savingsAccountId)),
                         formatCurrency(event.creditCardPendingBalanceAfter()),
                         formatCurrency(event.creditCardPendingExcludingRecentChargesAfter()));
             }
