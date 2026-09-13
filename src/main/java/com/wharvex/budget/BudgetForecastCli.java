@@ -3,7 +3,9 @@ package com.wharvex.budget;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -43,6 +45,10 @@ public final class BudgetForecastCli implements Callable<Integer> {
             description = "Only display changes for this account name. Repeat to select multiple accounts.")
     private List<String> accountNames;
 
+    @Option(names = "--pending-transactions-csv",
+            description = "CSV file containing pending credit-card transactions.")
+    private Path pendingTransactionsCsv;
+
     @Override
     public Integer call() {
         if (days < 1) {
@@ -54,6 +60,18 @@ public final class BudgetForecastCli implements Callable<Integer> {
             data = new JdbcFinanceRepository().load(jdbcUrl, username, password);
         } catch (SQLException exception) {
             throw new IllegalStateException("Unable to load budget data: " + exception.getMessage(), exception);
+        }
+        if (pendingTransactionsCsv != null) {
+            try {
+                data = new FinanceData(
+                        data.accounts(),
+                        data.schedules(),
+                        data.incomes(),
+                        new PendingTransactionsCsv().load(pendingTransactionsCsv));
+            } catch (IOException | IllegalArgumentException exception) {
+                throw new IllegalStateException(
+                        "Unable to load pending transactions CSV: " + exception.getMessage(), exception);
+            }
         }
 
         LocalDate through = from.plusDays(days - 1L);

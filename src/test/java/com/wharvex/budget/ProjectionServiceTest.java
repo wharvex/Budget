@@ -101,6 +101,34 @@ class ProjectionServiceTest {
     }
 
     @Test
+    void incorporatesPendingTransactionsIntoCreditCardPayments() {
+        FinanceData data = new FinanceData(
+                List.of(
+                        new Account(1, "Checking", new BigDecimal("500.00")),
+                        new Account(2, "Credit Card", BigDecimal.ZERO)),
+                List.of(),
+                List.of(),
+                List.of(
+                        new PendingTransaction(LocalDate.of(2026, 1, 10), "Older charge", new BigDecimal("-100.00")),
+                        new PendingTransaction(LocalDate.of(2026, 1, 20), "Recent charge", new BigDecimal("-50.00"))));
+
+        List<ProjectedEvent> events = new ProjectionService().project(
+                data, LocalDate.of(2026, 1, 19), LocalDate.of(2026, 2, 23));
+
+        assertEquals(3, events.size());
+        ProjectedEvent januaryPayment = events.get(1);
+        assertEquals(LocalDate.of(2026, 1, 23), januaryPayment.date());
+        assertEquals("Credit Card Payment", januaryPayment.expenseType());
+        assertEquals(new BigDecimal("100.00"), januaryPayment.amount());
+        assertEquals(new BigDecimal("-50.00"), januaryPayment.creditCardPendingBalanceAfter());
+
+        ProjectedEvent februaryPayment = events.get(2);
+        assertEquals(LocalDate.of(2026, 2, 23), februaryPayment.date());
+        assertEquals(new BigDecimal("50.00"), februaryPayment.amount());
+        assertEquals(new BigDecimal("0.00"), februaryPayment.creditCardPendingBalanceAfter());
+    }
+
+    @Test
     void appliesIncomeToCheckingAtEachIntervalThroughItsEndDate() {
         FinanceData data = new FinanceData(
                 List.of(
