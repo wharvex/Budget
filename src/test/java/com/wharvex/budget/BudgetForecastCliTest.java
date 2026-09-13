@@ -41,6 +41,8 @@ class BudgetForecastCliTest {
 
         String[] lines = output.toString().split(System.lineSeparator());
         assertTrue(lines[0].contains("SAVINGS"));
+        assertTrue(lines[0].contains("CC + PENDING"));
+        assertTrue(lines[0].endsWith("CC"));
         assertTrue(lines[1].indexOf("$50.00") < lines[1].indexOf("$550.00"));
     }
 }

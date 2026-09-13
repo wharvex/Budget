@@ -111,8 +111,7 @@ public final class BudgetForecastCli implements Callable<Integer> {
 
     void printHeader() {
         System.out.printf("%-10s  %-24s  %-20s  %14s  %14s  %14s  %14s  %20s%n",
-                "DATE", "TRANSACTION", "ACCOUNT", "CHANGE", "CHECKING", "SAVINGS", "CC PENDING",
-                "CC PENDING -5 DAYS");
+                "DATE", "TRANSACTION", "ACCOUNT", "CHANGE", "CHECKING", "SAVINGS", "CC + PENDING", "CC");
     }
 
     void printEvent(

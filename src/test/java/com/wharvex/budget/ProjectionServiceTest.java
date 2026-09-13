@@ -115,17 +115,39 @@ class ProjectionServiceTest {
         List<ProjectedEvent> events = new ProjectionService().project(
                 data, LocalDate.of(2026, 1, 19), LocalDate.of(2026, 2, 23));
 
-        assertEquals(3, events.size());
-        ProjectedEvent januaryPayment = events.get(1);
+        assertEquals(2, events.size());
+        ProjectedEvent januaryPayment = events.get(0);
         assertEquals(LocalDate.of(2026, 1, 23), januaryPayment.date());
         assertEquals("Credit Card Payment", januaryPayment.expenseType());
         assertEquals(new BigDecimal("100.00"), januaryPayment.amount());
         assertEquals(new BigDecimal("-50.00"), januaryPayment.creditCardPendingBalanceAfter());
 
-        ProjectedEvent februaryPayment = events.get(2);
+        ProjectedEvent februaryPayment = events.get(1);
         assertEquals(LocalDate.of(2026, 2, 23), februaryPayment.date());
         assertEquals(new BigDecimal("50.00"), februaryPayment.amount());
         assertEquals(new BigDecimal("0.00"), februaryPayment.creditCardPendingBalanceAfter());
+    }
+
+    @Test
+    void appliesPendingTransactionsImmediatelyAndAgesThemIntoCreditCardBalance() {
+        FinanceData data = new FinanceData(
+                List.of(
+                        new Account(1, "Checking", new BigDecimal("500.00")),
+                        new Account(2, "Credit Card", BigDecimal.ZERO)),
+                List.of(
+                        schedule(1, "First observation", 1, null, "1.00", Month.JANUARY, 19, false, null),
+                        schedule(2, "Second observation", 1, null, "1.00", Month.JANUARY, 25, false, null)),
+                List.of(),
+                List.of(new PendingTransaction(
+                        LocalDate.of(2026, 1, 20), "Pending charge", new BigDecimal("-50.00"))));
+
+        List<ProjectedEvent> events = new ProjectionService().project(
+                data, LocalDate.of(2026, 1, 19), LocalDate.of(2026, 1, 25));
+
+        assertEquals(new BigDecimal("-50.00"), events.get(0).creditCardPendingBalanceAfter());
+        assertEquals(BigDecimal.ZERO, events.get(0).creditCardPendingExcludingRecentChargesAfter());
+        assertEquals(new BigDecimal("-50.00"), events.get(1).creditCardPendingBalanceAfter());
+        assertEquals(new BigDecimal("-50.00"), events.get(1).creditCardPendingExcludingRecentChargesAfter());
     }
 
     @Test
