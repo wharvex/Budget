@@ -48,7 +48,7 @@ final class PendingTransactionsCsv {
     private Map<String, Integer> columns(List<String> header) {
         Map<String, Integer> columns = new HashMap<>();
         for (int index = 0; index < header.size(); index++) {
-            columns.put(header.get(index).trim().toLowerCase(), index);
+            columns.put(header.get(index).trim().toLowerCase().replace('_', ' '), index);
         }
         // The status word it gets from the csv is corrupted somehow, so add it manually here.
         columns.put("status", 0);
