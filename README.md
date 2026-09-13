@@ -42,7 +42,6 @@ On the 23rd of each month, the forecast also includes a non-persisted Credit Car
 
 ### Run Instructions
 
-Supply PostgreSQL credentials as command-line options or environment variables:
 First, set the following environment variables:
 
 ```
