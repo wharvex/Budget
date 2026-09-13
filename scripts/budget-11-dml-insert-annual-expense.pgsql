@@ -8,14 +8,9 @@ INSERT INTO expense(subtract_from_account_id, add_to_account_id, expense_type_id
             FROM
                 account
             WHERE
-                account_name = 'Checking'),
+                account_name = 'Credit Card'),
 (
-                SELECT
-                    account_id
-                FROM
-                    account
-                WHERE
-                    account_name = 'Credit Card'),
+        NULL,
 (
                     SELECT
                         expense_type_id
