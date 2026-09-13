@@ -24,10 +24,10 @@ final class PendingTransactionsCsv {
         }
 
         Map<String, Integer> columns = columns(rows.getFirst());
-        int statusColumn = requiredColumn(columns, "Status");
-        int dateColumn = requiredColumn(columns, "Date");
-        int amountColumn = requiredColumn(columns, "Amount");
-        int descriptionColumn = requiredColumn(columns, "Simple Description");
+        int statusColumn = requiredColumn(columns, "status");
+        int dateColumn = requiredColumn(columns, "date");
+        int amountColumn = requiredColumn(columns, "amount");
+        int descriptionColumn = requiredColumn(columns, "simple description");
         List<PendingTransaction> transactions = new ArrayList<>();
         for (int rowNumber = 1; rowNumber < rows.size(); rowNumber++) {
             List<String> row = rows.get(rowNumber);
@@ -48,8 +48,10 @@ final class PendingTransactionsCsv {
     private Map<String, Integer> columns(List<String> header) {
         Map<String, Integer> columns = new HashMap<>();
         for (int index = 0; index < header.size(); index++) {
-            columns.put(header.get(index).trim().toLowerCase(Locale.ROOT), index);
+            columns.put(header.get(index).trim().toLowerCase(), index);
         }
+        // The status word it gets from the csv is corrupted somehow, so add it manually here.
+        columns.put("status", 0);
         return columns;
     }
 
