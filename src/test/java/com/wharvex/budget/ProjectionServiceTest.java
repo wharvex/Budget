@@ -15,7 +15,8 @@ class ProjectionServiceTest {
         FinanceData data = new FinanceData(
                 List.of(
                         new Account(1, "Checking", new BigDecimal("100.00")),
-                        new Account(2, "Savings", new BigDecimal("500.00"))),
+                        new Account(2, "Savings", new BigDecimal("500.00")),
+                        new Account(3, "Credit Card", new BigDecimal("-20.00"))),
                 List.of(
                         schedule(1, "Utilities", 1, null, "25.00", Month.JANUARY, 2, false, null),
                         schedule(2, "Savings transfer", 1, 2L, "50.00", Month.JANUARY, 2, false, null)));
@@ -32,7 +33,9 @@ class ProjectionServiceTest {
     @Test
     void expandsLastDaySchedulesAndHonorsEndDate() {
         FinanceData data = new FinanceData(
-                List.of(new Account(1, "Checking", new BigDecimal("100.00"))),
+                List.of(
+                        new Account(1, "Checking", new BigDecimal("100.00")),
+                        new Account(2, "Credit Card", new BigDecimal("-20.00"))),
                 List.of(schedule(1, "Rent", 1, null, "10.00", Month.FEBRUARY, 1, true,
                         LocalDate.of(2028, 2, 29))));
 
@@ -42,6 +45,28 @@ class ProjectionServiceTest {
         assertEquals(
                 List.of(LocalDate.of(2027, 2, 28), LocalDate.of(2028, 2, 29)),
                 events.stream().map(ProjectedEvent::date).toList());
+    }
+
+    @Test
+    void tracksCreditCardPendingBalancesSeparatelyFromRecentCharges() {
+        FinanceData data = new FinanceData(
+                List.of(
+                        new Account(1, "Checking", new BigDecimal("100.00")),
+                        new Account(2, "Credit Card", new BigDecimal("-20.00"))),
+                List.of(
+                        schedule(1, "Recent charge", 2, null, "10.00", Month.JANUARY, 1, false, null),
+                        schedule(2, "Credit card payment", 1, 2L, "5.00", Month.JANUARY, 3, false, null),
+                        schedule(3, "Later expense", 1, null, "1.00", Month.JANUARY, 6, false, null)));
+
+        List<ProjectedEvent> events = new ProjectionService().project(
+                data, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 6));
+
+        assertEquals(new BigDecimal("95.00"), events.get(1).checkingBalanceAfter());
+        assertEquals(new BigDecimal("-25.00"), events.get(1).creditCardPendingBalanceAfter());
+        assertEquals(new BigDecimal("-15.00"),
+                events.get(1).creditCardPendingExcludingRecentChargesAfter());
+        assertEquals(new BigDecimal("-25.00"),
+                events.get(2).creditCardPendingExcludingRecentChargesAfter());
     }
 
     private ExpenseSchedule schedule(
@@ -58,4 +83,3 @@ class ProjectionServiceTest {
                 id, type, fromAccount, toAccount, new BigDecimal(amount), endDate, month, day, lastOfMonth);
     }
 }
-
