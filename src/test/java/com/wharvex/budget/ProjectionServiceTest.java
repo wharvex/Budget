@@ -45,7 +45,10 @@ class ProjectionServiceTest {
 
         assertEquals(
                 List.of(LocalDate.of(2027, 2, 28), LocalDate.of(2028, 2, 29)),
-                events.stream().map(ProjectedEvent::date).toList());
+                events.stream()
+                        .filter(event -> event.expenseType().equals("Rent"))
+                        .map(ProjectedEvent::date)
+                        .toList());
     }
 
     @Test
@@ -68,6 +71,33 @@ class ProjectionServiceTest {
                 events.get(1).creditCardPendingExcludingRecentChargesAfter());
         assertEquals(new BigDecimal("-25.00"),
                 events.get(2).creditCardPendingExcludingRecentChargesAfter());
+    }
+
+    @Test
+    void paysOffCreditCardChargesOlderThanFiveDaysOnTheTwentyThird() {
+        FinanceData data = new FinanceData(
+                List.of(
+                        new Account(1, "Checking", new BigDecimal("500.00")),
+                        new Account(2, "Credit Card", new BigDecimal("-100.00"))),
+                List.of(schedule(1, "Recent charge", 2, null, "50.00", Month.JANUARY, 20, false, null)));
+
+        List<ProjectedEvent> events = new ProjectionService().project(
+                data, LocalDate.of(2026, 1, 19), LocalDate.of(2026, 2, 23));
+
+        assertEquals(3, events.size());
+        ProjectedEvent januaryPayment = events.get(1);
+        assertEquals(LocalDate.of(2026, 1, 23), januaryPayment.date());
+        assertEquals("Credit Card Payment", januaryPayment.expenseType());
+        assertEquals(new BigDecimal("100.00"), januaryPayment.amount());
+        assertEquals(new BigDecimal("400.00"), januaryPayment.checkingBalanceAfter());
+        assertEquals(new BigDecimal("-50.00"), januaryPayment.creditCardPendingBalanceAfter());
+        assertEquals(new BigDecimal("0.00"), januaryPayment.creditCardPendingExcludingRecentChargesAfter());
+
+        ProjectedEvent februaryPayment = events.get(2);
+        assertEquals(LocalDate.of(2026, 2, 23), februaryPayment.date());
+        assertEquals(new BigDecimal("50.00"), februaryPayment.amount());
+        assertEquals(new BigDecimal("350.00"), februaryPayment.checkingBalanceAfter());
+        assertEquals(new BigDecimal("0.00"), februaryPayment.creditCardPendingBalanceAfter());
     }
 
     @Test
