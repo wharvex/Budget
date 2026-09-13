@@ -11,6 +11,8 @@ import java.util.Map;
 final class ProjectionService {
     private static final String CHECKING_ACCOUNT_NAME = "Checking";
     private static final String CREDIT_CARD_ACCOUNT_NAME = "Credit Card";
+    private static final long CREDIT_CARD_PAYMENT_EXPENSE_ID = 0;
+    private static final String CREDIT_CARD_PAYMENT_EXPENSE_TYPE = "Credit Card Payment";
 
     List<ProjectedEvent> project(FinanceData data, LocalDate from, LocalDate through) {
         if (through.isBefore(from)) {
@@ -88,6 +90,26 @@ final class ProjectionService {
                         schedule.amount(),
                         schedule.subtractFromAccountId(),
                         schedule.addToAccountId(),
+                        Map.copyOf(balances),
+                        checkingBalance,
+                        creditCardPendingBalance,
+                        creditCardPendingExcludingRecentChargesBalance));
+            }
+            if (date.getDayOfMonth() == 23 && creditCardPendingExcludingRecentChargesBalance.signum() < 0) {
+                BigDecimal paymentAmount = creditCardPendingExcludingRecentChargesBalance.negate();
+                changeBalance(balances, checkingAccountId, paymentAmount.negate());
+                changeBalance(balances, creditCardAccountId, paymentAmount);
+                checkingBalance = checkingBalance.subtract(paymentAmount);
+                creditCardPendingBalance = creditCardPendingBalance.add(paymentAmount);
+                creditCardPendingExcludingRecentChargesBalance =
+                        creditCardPendingExcludingRecentChargesBalance.add(paymentAmount);
+                events.add(new ProjectedEvent(
+                        date,
+                        CREDIT_CARD_PAYMENT_EXPENSE_ID,
+                        CREDIT_CARD_PAYMENT_EXPENSE_TYPE,
+                        paymentAmount,
+                        checkingAccountId,
+                        creditCardAccountId,
                         Map.copyOf(balances),
                         checkingBalance,
                         creditCardPendingBalance,

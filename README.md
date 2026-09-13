@@ -33,4 +33,6 @@ export BUDGET_DB_PASSWORD=...
 
 `--from` defaults to today. `--days` defaults to 90 and includes the start
 date. Repeat `--account` to limit displayed rows while still applying every
-scheduled expense to the projected balances.
+scheduled expense to the projected balances. On the 23rd of each month, the
+forecast also includes a non-persisted Credit Card Payment from Checking for
+the pending credit-card balance excluding charges from the previous five days.
