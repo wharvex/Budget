@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
+import java.time.Period;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,6 +68,31 @@ class ProjectionServiceTest {
                 events.get(1).creditCardPendingExcludingRecentChargesAfter());
         assertEquals(new BigDecimal("-25.00"),
                 events.get(2).creditCardPendingExcludingRecentChargesAfter());
+    }
+
+    @Test
+    void appliesIncomeToCheckingAtEachIntervalThroughItsEndDate() {
+        FinanceData data = new FinanceData(
+                List.of(
+                        new Account(1, "Checking", new BigDecimal("100.00")),
+                        new Account(2, "Credit Card", BigDecimal.ZERO)),
+                List.of(),
+                List.of(new IncomeSchedule(
+                        1,
+                        new BigDecimal("500.00"),
+                        LocalDate.of(2026, 1, 3),
+                        LocalDate.of(2026, 1, 17),
+                        Period.ofDays(7))));
+
+        List<ProjectedEvent> events = new ProjectionService().project(
+                data, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
+
+        assertEquals(
+                List.of(LocalDate.of(2026, 1, 3), LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 17)),
+                events.stream().map(ProjectedEvent::date).toList());
+        assertEquals(new BigDecimal("-500.00"), events.get(0).amount());
+        assertEquals(new BigDecimal("1600.00"), events.get(2).checkingBalanceAfter());
+        assertEquals(new BigDecimal("1600.00"), events.get(2).balancesAfter().get(1L));
     }
 
     private ExpenseSchedule schedule(

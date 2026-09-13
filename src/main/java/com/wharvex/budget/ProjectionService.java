@@ -31,21 +31,42 @@ final class ProjectionService {
         List<ExpenseSchedule> schedules = data.schedules().stream()
                 .sorted(Comparator.comparingLong(ExpenseSchedule::expenseId))
                 .toList();
+        List<IncomeSchedule> incomes = data.incomes().stream()
+                .sorted(Comparator.comparingLong(IncomeSchedule::incomeId))
+                .toList();
         List<ProjectedEvent> events = new ArrayList<>();
         for (LocalDate date = from; !date.isAfter(through); date = date.plusDays(1)) {
+            LocalDate recentChargeStart = date.minusDays(4);
+            for (PendingCharge charge : recentCreditCardCharges) {
+                if (charge.date().isBefore(recentChargeStart)) {
+                    creditCardPendingExcludingRecentChargesBalance =
+                            creditCardPendingExcludingRecentChargesBalance.add(charge.amount());
+                }
+            }
+            recentCreditCardCharges.removeIf(charge -> charge.date().isBefore(recentChargeStart));
+            for (IncomeSchedule income : incomes) {
+                if (!income.occursOn(date)) {
+                    continue;
+                }
+                changeBalance(balances, checkingAccountId, income.amount());
+                checkingBalance = checkingBalance.add(income.amount());
+                events.add(new ProjectedEvent(
+                        date,
+                        income.incomeId(),
+                        "Income",
+                        income.amount().negate(),
+                        checkingAccountId,
+                        null,
+                        Map.copyOf(balances),
+                        checkingBalance,
+                        creditCardPendingBalance,
+                        creditCardPendingExcludingRecentChargesBalance));
+            }
             for (ExpenseSchedule schedule : schedules) {
                 if (!schedule.occursOn(date)) {
                     continue;
                 }
 
-                LocalDate recentChargeStart = date.minusDays(4);
-                for (PendingCharge charge : recentCreditCardCharges) {
-                    if (charge.date().isBefore(recentChargeStart)) {
-                        creditCardPendingExcludingRecentChargesBalance =
-                                creditCardPendingExcludingRecentChargesBalance.add(charge.amount());
-                    }
-                }
-                recentCreditCardCharges.removeIf(charge -> charge.date().isBefore(recentChargeStart));
                 changeBalance(balances, schedule.subtractFromAccountId(), schedule.amount().negate());
                 if (schedule.addToAccountId() != null) {
                     changeBalance(balances, schedule.addToAccountId(), schedule.amount());

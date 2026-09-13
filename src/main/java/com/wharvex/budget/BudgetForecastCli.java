@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @Command(
         name = "budget-forecast",
         mixinStandardHelpOptions = true,
-        description = "Projects scheduled expenses and account balances from a PostgreSQL budget database.")
+        description = "Projects scheduled income, expenses, and account balances from a PostgreSQL budget database.")
 public final class BudgetForecastCli implements Callable<Integer> {
     @Option(names = "--db-url", defaultValue = "${env:BUDGET_DB_URL}", required = true,
             description = "PostgreSQL JDBC URL (or BUDGET_DB_URL).")
@@ -67,7 +67,7 @@ public final class BudgetForecastCli implements Callable<Integer> {
             printEvent(event, accountsById, selectedAccounts);
         }
         if (events.isEmpty()) {
-            System.out.printf("No scheduled expenses from %s through %s.%n", from, through);
+            System.out.printf("No scheduled income or expenses from %s through %s.%n", from, through);
         }
         return 0;
     }
@@ -87,7 +87,7 @@ public final class BudgetForecastCli implements Callable<Integer> {
 
     private void printHeader() {
         System.out.printf("%-10s  %-24s  %-20s  %14s  %14s  %14s  %20s%n",
-                "DATE", "EXPENSE", "ACCOUNT", "CHANGE", "CHECKING", "CC PENDING", "CC PENDING -5 DAYS");
+                "DATE", "TRANSACTION", "ACCOUNT", "CHANGE", "CHECKING", "CC PENDING", "CC PENDING -5 DAYS");
     }
 
     private void printEvent(

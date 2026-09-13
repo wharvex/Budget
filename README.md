@@ -13,7 +13,8 @@ cat personal_scripts/*.pgsql | psql -U budget -d budget -1
 ## Forecast CLI
 
 `budget-forecast` is a Java 21/Gradle application that projects recurring
-expenses and the balances of the affected accounts. An expense that has an
+income, expenses, and the balances of the affected accounts. Income is applied
+to Checking according to its start date, end date, and interval. An expense that has an
 `add_to_account_id` is treated as a transfer: the source account is debited
 and the destination account is credited on the scheduled date.
 
