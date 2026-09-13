@@ -31,6 +31,11 @@ export BUDGET_DB_PASSWORD=...
 ./gradlew run --args="--from 2026-10-01 --days 90 --account Checking"
 ```
 
+Use `--pending-transactions-csv path/to/transactions.csv` to include pending
+credit-card transactions exported with the `status`, `date`,
+`simple_description`, and `amount` columns. Only rows whose status is
+`pending` are loaded; amounts use their CSV sign.
+
 `--from` defaults to today. `--days` defaults to 90 and includes the start
 date. Repeat `--account` to limit displayed rows while still applying every
 scheduled expense to the projected balances. On the 23rd of each month, the

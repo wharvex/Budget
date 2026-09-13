@@ -29,12 +29,27 @@ final class ProjectionService {
         BigDecimal creditCardPendingBalance = balances.get(creditCardAccountId);
         BigDecimal creditCardPendingExcludingRecentChargesBalance = creditCardPendingBalance;
         List<PendingCharge> recentCreditCardCharges = new ArrayList<>();
+        for (PendingTransaction transaction : data.pendingTransactions()) {
+            if (transaction.date().isBefore(from)) {
+                changeBalance(balances, creditCardAccountId, transaction.amount());
+                creditCardPendingBalance = creditCardPendingBalance.add(transaction.amount());
+                if (transaction.date().isBefore(from.minusDays(4))) {
+                    creditCardPendingExcludingRecentChargesBalance =
+                            creditCardPendingExcludingRecentChargesBalance.add(transaction.amount());
+                } else {
+                    recentCreditCardCharges.add(new PendingCharge(transaction.date(), transaction.amount()));
+                }
+            }
+        }
 
         List<ExpenseSchedule> schedules = data.schedules().stream()
                 .sorted(Comparator.comparingLong(ExpenseSchedule::expenseId))
                 .toList();
         List<IncomeSchedule> incomes = data.incomes().stream()
                 .sorted(Comparator.comparingLong(IncomeSchedule::incomeId))
+                .toList();
+        List<PendingTransaction> pendingTransactions = data.pendingTransactions().stream()
+                .sorted(Comparator.comparing(PendingTransaction::date))
                 .toList();
         List<ProjectedEvent> events = new ArrayList<>();
         for (LocalDate date = from; !date.isAfter(through); date = date.plusDays(1)) {
@@ -90,6 +105,25 @@ final class ProjectionService {
                         schedule.amount(),
                         schedule.subtractFromAccountId(),
                         schedule.addToAccountId(),
+                        Map.copyOf(balances),
+                        checkingBalance,
+                        creditCardPendingBalance,
+                        creditCardPendingExcludingRecentChargesBalance));
+            }
+            for (PendingTransaction transaction : pendingTransactions) {
+                if (!transaction.date().equals(date)) {
+                    continue;
+                }
+                changeBalance(balances, creditCardAccountId, transaction.amount());
+                creditCardPendingBalance = creditCardPendingBalance.add(transaction.amount());
+                recentCreditCardCharges.add(new PendingCharge(date, transaction.amount()));
+                events.add(new ProjectedEvent(
+                        date,
+                        0,
+                        transaction.description(),
+                        transaction.amount().negate(),
+                        creditCardAccountId,
+                        null,
                         Map.copyOf(balances),
                         checkingBalance,
                         creditCardPendingBalance,
