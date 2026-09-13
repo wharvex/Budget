@@ -11,6 +11,8 @@ record ProjectedEvent(
         BigDecimal amount,
         long subtractFromAccountId,
         Long addToAccountId,
-        Map<Long, BigDecimal> balancesAfter) {
+        Map<Long, BigDecimal> balancesAfter,
+        BigDecimal checkingBalanceAfter,
+        BigDecimal creditCardPendingBalanceAfter,
+        BigDecimal creditCardPendingExcludingRecentChargesAfter) {
 }
-

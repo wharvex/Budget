@@ -86,8 +86,8 @@ public final class BudgetForecastCli implements Callable<Integer> {
     }
 
     private void printHeader() {
-        System.out.printf("%-10s  %-24s  %-20s  %14s  %14s%n",
-                "DATE", "EXPENSE", "ACCOUNT", "CHANGE", "BALANCE");
+        System.out.printf("%-10s  %-24s  %-20s  %14s  %14s  %14s  %20s%n",
+                "DATE", "EXPENSE", "ACCOUNT", "CHANGE", "CHECKING", "CC PENDING", "CC PENDING -5 DAYS");
     }
 
     private void printEvent(
@@ -102,12 +102,14 @@ public final class BudgetForecastCli implements Callable<Integer> {
         for (Account account : selectedAccounts) {
             BigDecimal change = changes.get(account.id());
             if (change != null) {
-                System.out.printf("%-10s  %-24s  %-20s  %14s  %14s%n",
+                System.out.printf("%-10s  %-24s  %-20s  %14s  %14s  %14s  %20s%n",
                         event.date(),
                         event.expenseType(),
                         accountsById.get(account.id()).name(),
                         formatCurrency(change),
-                        formatCurrency(event.balancesAfter().get(account.id())));
+                        formatCurrency(event.checkingBalanceAfter()),
+                        formatCurrency(event.creditCardPendingBalanceAfter()),
+                        formatCurrency(event.creditCardPendingExcludingRecentChargesAfter()));
             }
         }
     }
