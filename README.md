@@ -2,6 +2,14 @@
 
 ## Database
 
+### Background
+
+The database contains your personal finance information (account balances, expenses, expense types, income, etc.).
+
+All expenses should have a null `add_to_account_id` except account transfers.
+
+Expenses with `is_last_of_month` on their `expense_day` records set to true ignore the day and just get applied on the last of the month.
+
 ### Run Instructions
 
 Download and install PostgreSQL.
@@ -32,11 +40,9 @@ cat personal_scripts/*.pgsql | psql -U budget -d budget -1
 
 ### Background
 
-`budget-forecast` is a Java 21/Gradle application that projects recurring income, expenses, and the balances of the affected accounts.
+The CLI is a Java 21/Gradle application that projects recurring income, expenses, and the balances of the affected accounts.
 
 Income is applied to Checking according to its start date, end date, and interval.
-
-An expense that has an `add_to_account_id` is treated as a transfer: the source account is debited and the destination account is credited on the scheduled date.
 
 On the 23rd of each month, the forecast also includes a non-persisted Credit Card Payment from Checking for the pending credit-card balance excluding charges from the previous five days.
 
