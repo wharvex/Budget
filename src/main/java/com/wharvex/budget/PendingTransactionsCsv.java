@@ -39,7 +39,7 @@ final class PendingTransactionsCsv {
                         LocalDate.parse(value(row, dateColumn, rowNumber).trim(), DATE_FORMAT),
                         value(row, descriptionColumn, rowNumber).trim(),
                         new BigDecimal(value(row, amountColumn, rowNumber).trim()
-                                .replace("$", "").replace(",", ""))));
+                                .replace("$", "").replace(",", "")).negate()));
             }
         }
         return transactions;
@@ -48,9 +48,10 @@ final class PendingTransactionsCsv {
     private Map<String, Integer> columns(List<String> header) {
         Map<String, Integer> columns = new HashMap<>();
         for (int index = 0; index < header.size(); index++) {
-            columns.put(header.get(index).trim().toLowerCase().replace('_', ' '), index);
+            columns.put(header.get(index).trim().toLowerCase(Locale.ROOT).replace('_', ' '), index);
         }
-        // The status word it gets from the csv is corrupted somehow, so add it manually here.
+        // The status word it gets from the csv is corrupted somehow, so add it manually
+        // here.
         columns.put("status", 0);
         return columns;
     }
