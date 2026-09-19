@@ -26,18 +26,12 @@ final class ProjectionService {
         long checkingAccountId = accountId(data.accounts(), CHECKING_ACCOUNT_NAME);
         long creditCardAccountId = accountId(data.accounts(), CREDIT_CARD_ACCOUNT_NAME);
         BigDecimal checkingBalance = balances.get(checkingAccountId);
-        BigDecimal creditCardPendingBalance = balances.get(creditCardAccountId);
-        BigDecimal creditCardPendingExcludingRecentChargesBalance = creditCardPendingBalance;
+        BigDecimal creditCardBalancePlusPending = balances.get(creditCardAccountId);
+        BigDecimal creditCardBalance = creditCardBalancePlusPending;
         List<PendingCharge> recentCreditCardCharges = new ArrayList<>();
         for (PendingTransaction transaction : data.pendingTransactions()) {
             changeBalance(balances, creditCardAccountId, transaction.amount());
-            creditCardPendingBalance = creditCardPendingBalance.add(transaction.amount());
-            if (transaction.date().isBefore(from.minusDays(4))) {
-                creditCardPendingExcludingRecentChargesBalance =
-                        creditCardPendingExcludingRecentChargesBalance.add(transaction.amount());
-            } else {
-                recentCreditCardCharges.add(new PendingCharge(transaction.date(), transaction.amount()));
-            }
+            creditCardBalancePlusPending = creditCardBalancePlusPending.add(transaction.amount());
         }
 
         List<ExpenseSchedule> schedules = data.schedules().stream()
@@ -51,8 +45,8 @@ final class ProjectionService {
             LocalDate recentChargeStart = date.minusDays(4);
             for (PendingCharge charge : recentCreditCardCharges) {
                 if (charge.date().isBefore(recentChargeStart)) {
-                    creditCardPendingExcludingRecentChargesBalance =
-                            creditCardPendingExcludingRecentChargesBalance.add(charge.amount());
+                    creditCardBalance =
+                            creditCardBalance.add(charge.amount());
                 }
             }
             recentCreditCardCharges.removeIf(charge -> charge.date().isBefore(recentChargeStart));
@@ -71,8 +65,8 @@ final class ProjectionService {
                         null,
                         Map.copyOf(balances),
                         checkingBalance,
-                        creditCardPendingBalance,
-                        creditCardPendingExcludingRecentChargesBalance));
+                        creditCardBalancePlusPending,
+                        creditCardBalance));
             }
             for (ExpenseSchedule schedule : schedules) {
                 if (!schedule.occursOn(date)) {
@@ -85,13 +79,13 @@ final class ProjectionService {
                 }
                 checkingBalance = changeIfAffected(
                         checkingBalance, checkingAccountId, schedule);
-                creditCardPendingBalance = changeIfAffected(
-                        creditCardPendingBalance, creditCardAccountId, schedule);
+                creditCardBalancePlusPending = changeIfAffected(
+                        creditCardBalancePlusPending, creditCardAccountId, schedule);
                 if (schedule.subtractFromAccountId() == creditCardAccountId) {
                     recentCreditCardCharges.add(new PendingCharge(date, schedule.amount().negate()));
                 } else {
-                    creditCardPendingExcludingRecentChargesBalance = changeIfAffected(
-                            creditCardPendingExcludingRecentChargesBalance, creditCardAccountId, schedule);
+                    creditCardBalance = changeIfAffected(
+                            creditCardBalance, creditCardAccountId, schedule);
                 }
                 events.add(new ProjectedEvent(
                         date,
@@ -102,17 +96,17 @@ final class ProjectionService {
                         schedule.addToAccountId(),
                         Map.copyOf(balances),
                         checkingBalance,
-                        creditCardPendingBalance,
-                        creditCardPendingExcludingRecentChargesBalance));
+                        creditCardBalancePlusPending,
+                        creditCardBalance));
             }
-            if (date.getDayOfMonth() == 23 && creditCardPendingExcludingRecentChargesBalance.signum() < 0) {
-                BigDecimal paymentAmount = creditCardPendingExcludingRecentChargesBalance.negate();
+            if (date.getDayOfMonth() == 23 && creditCardBalance.signum() < 0) {
+                BigDecimal paymentAmount = creditCardBalance.negate();
                 changeBalance(balances, checkingAccountId, paymentAmount.negate());
                 changeBalance(balances, creditCardAccountId, paymentAmount);
                 checkingBalance = checkingBalance.subtract(paymentAmount);
-                creditCardPendingBalance = creditCardPendingBalance.add(paymentAmount);
-                creditCardPendingExcludingRecentChargesBalance =
-                        creditCardPendingExcludingRecentChargesBalance.add(paymentAmount);
+                creditCardBalancePlusPending = creditCardBalancePlusPending.add(paymentAmount);
+                creditCardBalance =
+                        creditCardBalance.add(paymentAmount);
                 events.add(new ProjectedEvent(
                         date,
                         CREDIT_CARD_PAYMENT_EXPENSE_ID,
@@ -122,8 +116,8 @@ final class ProjectionService {
                         creditCardAccountId,
                         Map.copyOf(balances),
                         checkingBalance,
-                        creditCardPendingBalance,
-                        creditCardPendingExcludingRecentChargesBalance));
+                        creditCardBalancePlusPending,
+                        creditCardBalance));
             }
         }
         return events;
