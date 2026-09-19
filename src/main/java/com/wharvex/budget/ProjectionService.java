@@ -71,12 +71,14 @@ final class ProjectionService {
                     continue;
                 }
 
-                // Subtract the expense from checking, or add it as a pending charge if it's a credit card expense.
+                // Subtract the expense from checking or add it as a pending charge & update CC Pending if it's a CC
+                // expense.
                 if (schedule.subtractFromAccountId() == checkingAccountId) {
                     checkingBalance = addAmountToStoredBalance(balances, schedule.subtractFromAccountId(),
                             schedule.amount().negate());
                 } else {
                     pendingCreditCardCharges.add(new PendingCharge(date, schedule.amount().negate()));
+                    creditCardBalancePlusPending = creditCardBalancePlusPending.add(schedule.amount().negate());
                 }
 
                 // Add to an account if this is a transfer. This is where the savings account gets incremented.
