@@ -46,13 +46,11 @@ final class ProjectionService {
 
         // Iterate through each date in the projection range.
         for (LocalDate date = from; !date.isAfter(through); date = date.plusDays(1)) {
+
             // Update the pending charge cutoff and move charges older than it to the main credit card balance.
             LocalDate pendingChargeCutoff = date.minusDays(4);
-            for (PendingCharge charge : pendingCreditCardCharges) {
-                if (charge.date().isBefore(pendingChargeCutoff)) {
-                    creditCardBalance = creditCardBalance.add(charge.amount());
-                }
-            }
+            creditCardBalance = addPendingChargesToBalance(creditCardBalance, pendingCreditCardCharges,
+                    pendingChargeCutoff);
             pendingCreditCardCharges.removeIf(charge -> charge.date().isBefore(pendingChargeCutoff));
 
             // Process incomes for the current date.
@@ -60,7 +58,7 @@ final class ProjectionService {
                 if (!income.occursOn(date)) {
                     continue;
                 }
-                changeBalance(balances, checkingAccountId, income.amount());
+                addAmountToStoredBalance(balances, checkingAccountId, income.amount());
                 checkingBalance = checkingBalance.add(income.amount());
                 events.add(new ProjectedEvent(date, income.incomeId(), "Income", income.amount().negate(),
                         checkingAccountId, null, Map.copyOf(balances), checkingBalance, creditCardBalancePlusPending,
@@ -73,39 +71,47 @@ final class ProjectionService {
                     continue;
                 }
 
-                // Subtract the expense from the appropriate account, and add it to another one if this is a transfer.
-                changeBalance(balances, schedule.subtractFromAccountId(), schedule.amount().negate());
-                if (schedule.addToAccountId() != null) {
-                    changeBalance(balances, schedule.addToAccountId(), schedule.amount());
-                }
-                checkingBalance = changeIfAffected(checkingBalance, checkingAccountId, schedule);
-                creditCardBalancePlusPending = changeIfAffected(creditCardBalancePlusPending, creditCardAccountId,
-                        schedule);
-
-                if (schedule.subtractFromAccountId() == creditCardAccountId) {
-                    pendingCreditCardCharges.add(new PendingCharge(date, schedule.amount().negate()));
+                // Subtract the expense from checking, or add it as a pending charge if it's a credit card expense.
+                if (schedule.subtractFromAccountId() == checkingAccountId) {
+                    checkingBalance = addAmountToStoredBalance(balances, schedule.subtractFromAccountId(),
+                            schedule.amount().negate());
                 } else {
-                    creditCardBalance = changeIfAffected(creditCardBalance, creditCardAccountId, schedule);
+                    pendingCreditCardCharges.add(new PendingCharge(date, schedule.amount().negate()));
                 }
+
+                // Add to an account if this is a transfer. This is where the savings account gets incremented.
+                if (schedule.addToAccountId() != null) {
+                    addAmountToStoredBalance(balances, schedule.addToAccountId(), schedule.amount());
+                }
+
+                // Record as an event for later printout.
                 events.add(new ProjectedEvent(date, schedule.expenseId(), schedule.expenseType(), schedule.amount(),
                         schedule.subtractFromAccountId(), schedule.addToAccountId(), Map.copyOf(balances),
                         checkingBalance, creditCardBalancePlusPending, creditCardBalance));
             }
 
-            // Pay off credit card if it's the 23rd of the month and the balance is negative.
+            // Pay off CC if it's the 23rd of the month and the balance is negative, and record the payment as an event.
             if (date.getDayOfMonth() == 23 && creditCardBalance.signum() < 0) {
                 BigDecimal paymentAmount = creditCardBalance.negate();
-                changeBalance(balances, checkingAccountId, paymentAmount.negate());
-                changeBalance(balances, creditCardAccountId, paymentAmount);
-                checkingBalance = checkingBalance.subtract(paymentAmount);
+                checkingBalance = addAmountToStoredBalance(balances, checkingAccountId, paymentAmount.negate());
+                creditCardBalance = addAmountToStoredBalance(balances, creditCardAccountId, paymentAmount);
                 creditCardBalancePlusPending = creditCardBalancePlusPending.add(paymentAmount);
-                creditCardBalance = creditCardBalance.add(paymentAmount);
                 events.add(new ProjectedEvent(date, CREDIT_CARD_PAYMENT_EXPENSE_ID, CREDIT_CARD_PAYMENT_EXPENSE_TYPE,
                         paymentAmount, checkingAccountId, creditCardAccountId, Map.copyOf(balances), checkingBalance,
                         creditCardBalancePlusPending, creditCardBalance));
             }
         }
         return events;
+    }
+
+    private BigDecimal addPendingChargesToBalance(BigDecimal creditCardBalance,
+            List<PendingCharge> pendingCreditCardCharges, LocalDate pendingChargeCutoff) {
+        for (PendingCharge charge : pendingCreditCardCharges) {
+            if (charge.date().isBefore(pendingChargeCutoff)) {
+                creditCardBalance = creditCardBalance.add(charge.amount());
+            }
+        }
+        return creditCardBalance;
     }
 
     private List<ExpenseSchedule> getSortedSchedules(FinanceData data) {
@@ -121,17 +127,7 @@ final class ProjectionService {
                 .orElseThrow(() -> new IllegalStateException("Account was not loaded: " + accountName)).id();
     }
 
-    private BigDecimal changeIfAffected(BigDecimal balance, long accountId, ExpenseSchedule schedule) {
-        if (schedule.subtractFromAccountId() == accountId) {
-            balance = balance.subtract(schedule.amount());
-        }
-        if (schedule.addToAccountId() != null && schedule.addToAccountId() == accountId) {
-            balance = balance.add(schedule.amount());
-        }
-        return balance;
-    }
-
-    private BigDecimal changeBalance(Map<Long, BigDecimal> balances, long accountId, BigDecimal change) {
+    private BigDecimal addAmountToStoredBalance(Map<Long, BigDecimal> balances, long accountId, BigDecimal change) {
         BigDecimal currentBalance = balances.get(accountId);
         if (currentBalance == null) {
             throw new IllegalStateException("Expense refers to an account that was not loaded: " + accountId);
