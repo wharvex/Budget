@@ -1,0 +1,6 @@
+{
+  "java.format.settings.url": ".vscode/java-format-settings.xml",
+  "[java]": {
+    "editor.formatOnSave": true
+  }
+}
