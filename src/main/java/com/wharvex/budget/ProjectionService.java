@@ -49,8 +49,8 @@ final class ProjectionService {
 
             // Update the pending charge cutoff and move charges older than it to the main credit card balance.
             LocalDate pendingChargeCutoff = date.minusDays(4);
-            creditCardBalance = addPendingChargesToBalance(creditCardBalance, pendingCreditCardCharges,
-                    pendingChargeCutoff);
+            creditCardBalance = addPendingChargesToBalance(balances, creditCardAccountId, creditCardBalance,
+                    pendingCreditCardCharges, pendingChargeCutoff);
             pendingCreditCardCharges.removeIf(charge -> charge.date().isBefore(pendingChargeCutoff));
 
             // Process incomes for the current date.
@@ -106,11 +106,11 @@ final class ProjectionService {
         return events;
     }
 
-    private BigDecimal addPendingChargesToBalance(BigDecimal creditCardBalance,
-            List<PendingCharge> pendingCreditCardCharges, LocalDate pendingChargeCutoff) {
+    private BigDecimal addPendingChargesToBalance(Map<Long, BigDecimal> balances, long creditCardAccountId,
+            BigDecimal creditCardBalance, List<PendingCharge> pendingCreditCardCharges, LocalDate pendingChargeCutoff) {
         for (PendingCharge charge : pendingCreditCardCharges) {
             if (charge.date().isBefore(pendingChargeCutoff)) {
-                creditCardBalance = creditCardBalance.add(charge.amount());
+                creditCardBalance = addAmountToStoredBalance(balances, creditCardAccountId, charge.amount());
             }
         }
         return creditCardBalance;

@@ -23,7 +23,7 @@
             "request": "launch",
             "mainClass": "com.wharvex.budget.BudgetForecastCli",
             "projectName": "Budget",
-            "args": "--pending-transactions-csv \"C:\\Users\\Admin\\Downloads\\test-export-data-4.csv\""
+            "args": "--pending-transactions-csv \"C:\\Users\\Admin\\Downloads\\export-data-cc.csv\" --days 50"
         }
     ]
 }
