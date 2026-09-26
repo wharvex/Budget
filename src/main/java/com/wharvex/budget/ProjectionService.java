@@ -11,6 +11,7 @@ import java.util.Map;
 final class ProjectionService {
     private static final String CHECKING_ACCOUNT_NAME = "Checking";
     private static final String CREDIT_CARD_ACCOUNT_NAME = "Credit Card";
+    // It does not seem like this is being used.
     private static final long CREDIT_CARD_PAYMENT_EXPENSE_ID = 0;
     private static final String CREDIT_CARD_PAYMENT_EXPENSE_TYPE = "Credit Card Payment";
 
